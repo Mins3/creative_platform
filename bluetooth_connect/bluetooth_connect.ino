@@ -8,6 +8,8 @@
 
 #define SS_PIN 10
 #define RST_PIN 9
+#define BT_RXD 8
+#define BT_TXD 7
 
 MFRC522 rfid(SS_PIN, RST_PIN); // Instance of the class
 
@@ -15,15 +17,11 @@ MFRC522::MIFARE_Key key;
 
 byte nuidPICC[4];
 
-int Tx = 7; //전송 보내는핀  
-int Rx = 6; //수신 받는핀
-
-SoftwareSerial BtSerial(Tx,Rx);
+SoftwareSerial bluetooth(BT_RXD, BT_TXD);
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(9600);
-  Serial.println("Ready to go");
+  Serial.begin(9600);  
   SPI.begin(); // Init SPI bus
 
   for (byte i = 0; i < 6; i++) {
@@ -32,10 +30,12 @@ void setup() {
 
   Serial.println(F("This code scan the MIFARE Classsic NUID."));
   Serial.print(F("Using the following key:"));
+  bluetooth.println(F("This code scan the MIFARE Classsic NUID."));
+  bluetooth.print(F("Using the following key:"));
   printHex(key.keyByte, MFRC522::MF_KEY_SIZE);
   
   rfid.PCD_Init(); // Init MFRC522 
-  BtSerial.begin(9600);
+  bluetooth.begin(9600);
   }
 
 void loop() {
@@ -49,14 +49,17 @@ void loop() {
     return;
 
   Serial.print(F("PICC type: "));
+  bluetooth.print(F("PICC type: "));
   MFRC522::PICC_Type piccType = rfid.PICC_GetType(rfid.uid.sak);
   Serial.println(rfid.PICC_GetTypeName(piccType));
+  bluetooth.println(rfid.PICC_GetTypeName(piccType));
 
   // Check is the PICC of Classic MIFARE type
   if (piccType != MFRC522::PICC_TYPE_MIFARE_MINI &&  
     piccType != MFRC522::PICC_TYPE_MIFARE_1K &&
     piccType != MFRC522::PICC_TYPE_MIFARE_4K) {
     Serial.println(F("Your tag is not of type MIFARE Classic."));
+    bluetooth.println(F("Your tag is not of type MIFARE Classic."));
     return;
   }
 
@@ -64,9 +67,8 @@ void loop() {
     rfid.uid.uidByte[1] != nuidPICC[1] || 
     rfid.uid.uidByte[2] != nuidPICC[2] || 
     rfid.uid.uidByte[3] != nuidPICC[3] ) {
-    easy_print("A new card has been detected.");
     Serial.println(F("A new card has been detected."));
-    BtSerial.println(F("A new card has been detected."));
+    bluetooth.println(F("A new card has been detected."));
 
     // Store NUID into nuidPICC array
     for (byte i = 0; i < 4; i++) {
@@ -75,13 +77,19 @@ void loop() {
    
     Serial.println(F("The NUID tag is:"));
     Serial.print(F("In hex: "));
+    bluetooth.println(F("The NUID tag is:"));
+    bluetooth.print(F("In hex: "));
     printHex(rfid.uid.uidByte, rfid.uid.size);
     Serial.println();
+    printHex(rfid.uid.uidByte, rfid.uid.size);
+    bluetooth.println();
     Serial.print(F("In dec: "));
     printDec(rfid.uid.uidByte, rfid.uid.size);
     Serial.println();
   }
-  else Serial.println(F("Card read previously."));
+  else {Serial.println(F("Card read previously."));
+  bluetooth.println(F("Card read previously."));}
+  
 
   // Halt PICC
   rfid.PICC_HaltA();
@@ -93,14 +101,13 @@ void loop() {
 
 void printHex(byte *buffer, byte bufferSize) {
   for (byte i = 0; i < bufferSize; i++) {
-    Serial.println(buffer[i] < 0x10 ? " 0" : " ");
-    Serial.println(buffer[i], HEX);
+    Serial.print(buffer[i] < 0x10 ? " 0" : " ");
+    Serial.print(buffer[i], HEX);
+    bluetooth.print(buffer[i] < 0x10 ? " 0" : " ");
+    bluetooth.print(buffer[i], HEX);
   }
 }
-int easy_print(String text) {
-    Serial.println(text);
-    BtSerial.println(text);
-}
+
 /**
  * Helper routine to dump a byte array as dec values to Serial.
  */
